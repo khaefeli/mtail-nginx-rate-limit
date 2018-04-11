@@ -1,0 +1,19 @@
+# Parser for a metrics-friendly nginx log format
+counter nginx_delayed_count by logfile, zone, server
+
+/^/ +
+/(?P<time_local>\S+ \S+) / + # local time in the Common Log Format
+/(?P<loglvln>\S+) / + # loglevel
+/(?P<pidn>\S+) / + # 
+/(?P<message>\S+ limiting requests, excess: \S+ by zone )"/ + # 
+/(?P<zone>\S+)", / + # 
+/client: (?P<client>\S+), / + # 
+/server: (?P<server>\S+), / + # 
+/request: "(?P<method>\S+) / + # 
+/(?P<uri>\S+) / + # 
+/(?P<protocoln>\S+)", / + # 
+/host: "(?P<hostn>\S+)"/ + # 
+/$/ {
+  nginx_delayed_count[getfilename()][$zone][$server]++
+}
+
