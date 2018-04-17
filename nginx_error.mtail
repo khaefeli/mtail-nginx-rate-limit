@@ -1,19 +1,26 @@
 # Parser for a metrics-friendly nginx log format
-counter nginx_delayed_count by logfile, zone, server
+counter nginx_delayed_count by logfile, type, zone, server
+counter nginx_limited_count by logfile, type, zone, server
 
 /^/ +
 /(?P<time_local>\S+ \S+) / + # local time in the Common Log Format
 /(?P<loglvln>\S+) / + # loglevel
-/(?P<pidn>\S+) / + # 
-/(?P<message>\S+ limiting requests, excess: \S+ by zone )"/ + # 
-/(?P<zone>\S+)", / + # 
-/client: (?P<client>\S+), / + # 
-/server: (?P<server>\S+), / + # 
-/request: "(?P<method>\S+) / + # 
-/(?P<uri>\S+) / + # 
-/(?P<protocoln>\S+)", / + # 
-/host: "(?P<hostn>\S+)"/ + # 
+/(?P<pidn>\S+) \*/ + #process /thread id 
+/(?P<id>\d+) / + # log id
+/(?P<type>\S+ request[s]), / + # limiting or delaying
+/excess: (?P<message>\S+ by zone )"/ + # capture excess
+/(?P<zone>\S+)", / + # shared memory zone
+/client: (?P<client>\S+), / + # client ip
+/server: (?P<server>\S+), / + # server 
+/request: "(?P<method>\S+) / + # request method (GET/POST etc)
+/(?P<uri>\S+) / + # request URI
+/(?P<protocoln>\S+)", / + # protocol (HTTP 1.1 / HTTP 2.0)
+/host: "(?P<hostn>\S+)"/ + # host
 /$/ {
-  nginx_delayed_count[getfilename()][$zone][$server]++
+  $type =~ /delay/ {
+    nginx_delayed_count[getfilename()]["delaying"][$zone][$server]++
+  }
+  $type =~ /limit/ {
+    nginx_limited_count[getfilename()]["limiting"][$zone][$server]++
+  }
 }
-
